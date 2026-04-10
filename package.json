@@ -1,0 +1,16 @@
+{
+  "name": "swat-book",
+  "version": "1.0.0",
+  "description": "Secure book with hidden messages",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
