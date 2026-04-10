@@ -109,8 +109,13 @@ function completeLogin() {
 const BACKEND_ORIGIN = 'http://localhost:3000';
 const API_BASE_URL = (() => {
   const isLocalFile = window.location.protocol === 'file:';
+  const isGitHubPages = window.location.hostname.endsWith('github.io');
   const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
   const isNonBackendLocalPort = isLocalHost && window.location.port && window.location.port !== '3000';
+
+  if (isGitHubPages) {
+    return null;
+  }
 
   if (isLocalFile || isNonBackendLocalPort) {
     return BACKEND_ORIGIN;
@@ -128,62 +133,72 @@ async function handleLogin() {
     return;
   }
 
+  const useBackend = Boolean(API_BASE_URL);
   console.log('API_BASE_URL:', API_BASE_URL);
-  console.log('Making request to:', `${API_BASE_URL}/api/login`);
+  if (useBackend) {
+    console.log('Making request to:', `${API_BASE_URL}/api/login`);
+  } else {
+    console.log('Skipping backend login; using local fallback on static host');
+  }
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ password })
-    });
+  let response;
+  let data = null;
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-    let data;
+  if (useBackend) {
     try {
-      data = await response.json();
-      console.log('Response data:', data);
-    } catch (err) {
-      console.error('Failed to parse JSON:', err);
-      data = null;
-    }
+      response = await fetch(`${API_BASE_URL}/api/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password })
+      });
 
-    if (!response.ok) {
-      const message = (data && data.message) ? data.message : 'Server login failed';
-      console.error('Login response error:', response.status, message);
-      showToast(message.replace(/\n/g, '<br>'));
-      return;
-    }
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
-    if (data && data.success) {
-      messageData = data.messages;
-      injectMessages(messageData);
-      completeLogin();
-    } else {
-      showToast((data && data.message) ? data.message.replace(/\n/g, '<br>') : 'Kiii 😐<br>Tomake ami ai name a daki?');
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    const fallback = await tryLocalLogin(password);
-    if (fallback) {
-      if (fallback.success) {
-        messageData = fallback.messages;
+      try {
+        data = await response.json();
+        console.log('Response data:', data);
+      } catch (err) {
+        console.error('Failed to parse JSON:', err);
+        data = null;
+      }
+
+      if (response.ok && data && data.success) {
+        messageData = data.messages;
         injectMessages(messageData);
         completeLogin();
         return;
       }
-      showToast(fallback.message.replace(/\n/g, '<br>'));
+
+      if (response.ok) {
+        showToast((data && data.message) ? data.message.replace(/\n/g, '<br>') : 'Kiii 😐<br>Tomake ami ai name a daki?');
+        return;
+      }
+
+      console.error('Login response error:', response.status, (data && data.message) ? data.message : 'Server login failed');
+    } catch (error) {
+      console.error('Backend request failed:', error);
+    }
+  }
+
+  const fallback = await tryLocalLogin(password);
+  if (fallback) {
+    if (fallback.success) {
+      messageData = fallback.messages;
+      injectMessages(messageData);
+      completeLogin();
       return;
     }
-    const isLocalFile = window.location.protocol === 'file:' || window.location.origin === 'null';
-    showToast(isLocalFile
-      ? 'Server not reachable. Start the app with `npm start` and open http://localhost:3000, or host the page on a local web server.'
-      : 'Error connecting to server. Make sure the backend is running and reachable.');
+    showToast(fallback.message.replace(/\n/g, '<br>'));
+    return;
   }
+
+  const isLocalFile = window.location.protocol === 'file:' || window.location.origin === 'null';
+  showToast(isLocalFile
+    ? 'Server not reachable. Start the app with `npm start` and open http://localhost:3000, or host the page on a local web server.'
+    : 'Unable to complete login. The backend API is unavailable on this host.');
 }
 
 // Update countdown timer
