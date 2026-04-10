@@ -82,6 +82,9 @@ async function handleLogin() {
     return;
   }
 
+  console.log('API_BASE_URL:', API_BASE_URL);
+  console.log('Making request to:', `${API_BASE_URL}/api/login`);
+
   try {
     const response = await fetch(`${API_BASE_URL}/api/login`, {
       method: 'POST',
@@ -91,10 +94,15 @@ async function handleLogin() {
       body: JSON.stringify({ password })
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
     let data;
     try {
       data = await response.json();
+      console.log('Response data:', data);
     } catch (err) {
+      console.error('Failed to parse JSON:', err);
       data = null;
     }
 
