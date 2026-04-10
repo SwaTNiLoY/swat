@@ -33,6 +33,41 @@ function injectMessages(messages) {
   if (loginTitle && messages.title) loginTitle.textContent = messages.title;
 }
 
+function decodeBase64(str) {
+  try {
+    return atob(str);
+  } catch (e) {
+    return str;
+  }
+}
+
+function decodeMessages(messages) {
+  const decoded = {};
+  for (const [key, value] of Object.entries(messages)) {
+    if (typeof value === 'string' && /^[A-Za-z0-9+/=]+$/.test(value)) {
+      decoded[key] = decodeBase64(value);
+    } else {
+      decoded[key] = value;
+    }
+  }
+  return decoded;
+}
+
+async function tryLocalLogin(password) {
+  try {
+    const response = await fetch('encoded_pages.json');
+    if (!response.ok) return null;
+    const localData = await response.json();
+    const encodedPassword = btoa(password.toLowerCase());
+    if (encodedPassword !== localData.password) {
+      return { success: false, message: 'Kiii 😐\nTomake ami ai name a daki?' };
+    }
+    return { success: true, messages: decodeMessages(localData.messages) };
+  } catch (err) {
+    return null;
+  }
+}
+
 // Show toast message
 let toastTimeout;
 
@@ -71,7 +106,18 @@ function completeLogin() {
   }, 500);
 }
 
-const API_BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin;
+const BACKEND_ORIGIN = 'http://localhost:3000';
+const API_BASE_URL = (() => {
+  const isLocalFile = window.location.protocol === 'file:';
+  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const isNonBackendLocalPort = isLocalHost && window.location.port && window.location.port !== '3000';
+
+  if (isLocalFile || isNonBackendLocalPort) {
+    return BACKEND_ORIGIN;
+  }
+
+  return window.location.origin;
+})();
 
 // Handle login
 async function handleLogin() {
@@ -109,7 +155,7 @@ async function handleLogin() {
     if (!response.ok) {
       const message = (data && data.message) ? data.message : 'Server login failed';
       console.error('Login response error:', response.status, message);
-      showToast(message.replace(/\\n/g, '<br>'));
+      showToast(message.replace(/\n/g, '<br>'));
       return;
     }
 
@@ -118,11 +164,25 @@ async function handleLogin() {
       injectMessages(messageData);
       completeLogin();
     } else {
-      showToast((data && data.message) ? data.message.replace(/\\n/g, '<br>') : 'Kiii 😐<br>Tomake ami ai name a daki?');
+      showToast((data && data.message) ? data.message.replace(/\n/g, '<br>') : 'Kiii 😐<br>Tomake ami ai name a daki?');
     }
   } catch (error) {
     console.error('Login error:', error);
-    showToast('Error connecting to server. Make sure server is running at localhost:3000');
+    const fallback = await tryLocalLogin(password);
+    if (fallback) {
+      if (fallback.success) {
+        messageData = fallback.messages;
+        injectMessages(messageData);
+        completeLogin();
+        return;
+      }
+      showToast(fallback.message.replace(/\n/g, '<br>'));
+      return;
+    }
+    const isLocalFile = window.location.protocol === 'file:' || window.location.origin === 'null';
+    showToast(isLocalFile
+      ? 'Server not reachable. Start the app with `npm start` and open http://localhost:3000, or host the page on a local web server.'
+      : 'Error connecting to server. Make sure the backend is running and reachable.');
   }
 }
 
