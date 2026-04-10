@@ -111,13 +111,14 @@ const API_BASE_URL = (() => {
   const isLocalFile = window.location.protocol === 'file:';
   const isGitHubPages = window.location.hostname.endsWith('github.io');
   const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const isLocalPort3000 = isLocalHost && window.location.port === '3000';
   const isNonBackendLocalPort = isLocalHost && window.location.port && window.location.port !== '3000';
 
-  if (isGitHubPages) {
+  if (isGitHubPages || (!isLocalFile && !isLocalPort3000 && !isNonBackendLocalPort && !isLocalHost)) {
     return null;
   }
 
-  if (isLocalFile || isNonBackendLocalPort) {
+  if (isLocalFile || isNonBackendLocalPort || isLocalPort3000) {
     return BACKEND_ORIGIN;
   }
 
