@@ -1,6 +1,6 @@
 // Frontend script - all data fetched from server, never embedded in page source
 let currentPage = 0;
-const totalPages = 6;
+const totalPages = 7;
 let messageData = {};
 let isLoggedIn = false;
 
@@ -221,6 +221,25 @@ function updateCountdown() {
   }
 }
 
+// Update final page countdown timer
+function updateCountdownFinal() {
+  const startDate = new Date('April 11, 2026 13:06:00');
+  const now = new Date();
+  let diff = Math.max(0, now - startDate);
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  diff -= days * 1000 * 60 * 60 * 24;
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  diff -= hours * 1000 * 60 * 60;
+  const minutes = Math.floor(diff / (1000 * 60));
+  diff -= minutes * 1000 * 60;
+  const seconds = Math.floor(diff / 1000);
+  const countdownText = `${days} day${days !== 1 ? 's' : ''} ${hours}h ${minutes}m ${seconds}s`;
+  const countdownElement = document.getElementById('countdownFinal');
+  if (countdownElement) {
+    countdownElement.textContent = countdownText;
+  }
+}
+
 // Event listeners for navigation
 nextButtons.forEach(button => {
   button.addEventListener('click', () => {
@@ -255,4 +274,8 @@ if (pageNoButton) {
 // Initialize
 showLoginOverlay();
 updateCountdown();
-setInterval(updateCountdown, 1000);
+updateCountdownFinal();
+setInterval(() => {
+  updateCountdown();
+  updateCountdownFinal();
+}, 1000);

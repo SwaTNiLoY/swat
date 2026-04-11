@@ -60,7 +60,8 @@ body {
 .page.page-3,
 .page.page-4,
 .page.page-5,
-.page.page-6 {
+.page.page-6,
+.page.page-7 {
   transform: rotateY(180deg);
   z-index: 2;
 }
@@ -190,6 +191,45 @@ body {
 }
 
 .book.page-6 .page.page-6 {
+  transform: rotateY(0deg);
+  z-index: 3;
+}
+
+.book.page-7 .page.page-0 {
+  transform: rotateY(-180deg);
+}
+
+.book.page-7 .page.page-1 {
+  transform: rotateY(-180deg);
+  z-index: 2;
+}
+
+.book.page-7 .page.page-2 {
+  transform: rotateY(-180deg);
+  z-index: 2;
+}
+
+.book.page-7 .page.page-3 {
+  transform: rotateY(-180deg);
+  z-index: 2;
+}
+
+.book.page-7 .page.page-4 {
+  transform: rotateY(-180deg);
+  z-index: 2;
+}
+
+.book.page-7 .page.page-5 {
+  transform: rotateY(-180deg);
+  z-index: 2;
+}
+
+.book.page-7 .page.page-6 {
+  transform: rotateY(-180deg);
+  z-index: 2;
+}
+
+.book.page-7 .page.page-7 {
   transform: rotateY(0deg);
   z-index: 3;
 }
@@ -357,6 +397,13 @@ body {
   font-size: 1.15rem;
   font-weight: 600;
   margin-bottom: 1rem;
+}
+
+.countdown-message {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #7a4b5d;
+  margin-top: 2rem;
 }
 
 .button-row {
