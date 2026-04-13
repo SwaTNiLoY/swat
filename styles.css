@@ -406,6 +406,13 @@ body {
   margin-top: 2rem;
 }
 
+.login-counter {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #7a4b5d;
+  margin-top: 1.5rem;
+}
+
 .button-row {
   margin-top: 28px;
   display: flex;

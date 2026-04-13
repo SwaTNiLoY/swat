@@ -3,6 +3,7 @@ let currentPage = 0;
 const totalPages = 7;
 let messageData = {};
 let isLoggedIn = false;
+let loginCount = 0;
 
 const book = document.getElementById('book');
 const nextButtons = document.querySelectorAll('.page-next');
@@ -16,6 +17,31 @@ const loginToast = document.getElementById('loginToast');
 // Update book view
 function updateBook() {
   book.className = `book page-${currentPage}`;
+}
+
+// Display login counter on the last page
+function updateLoginCounter() {
+  const counterElement = document.getElementById('loginCounter');
+  if (counterElement) {
+    counterElement.textContent = loginCount;
+  }
+}
+
+// Fetch login counter from backend
+async function fetchLoginCounter() {
+  const useBackend = Boolean(API_BASE_URL);
+  if (!useBackend) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/login-counter`);
+    if (response.ok) {
+      const data = await response.json();
+      loginCount = data.count;
+      updateLoginCounter();
+    }
+  } catch (error) {
+    console.error('Failed to fetch login counter:', error);
+  }
 }
 
 // Inject fetched messages into the page
@@ -168,6 +194,10 @@ async function handleLogin() {
 
       if (response.ok && data && data.success) {
         messageData = data.messages;
+        if (data.loginCount) {
+          loginCount = data.loginCount;
+          updateLoginCounter();
+        }
         injectMessages(messageData);
         completeLogin();
         return;
@@ -275,6 +305,7 @@ if (pageNoButton) {
 showLoginOverlay();
 updateCountdown();
 updateCountdownFinal();
+fetchLoginCounter();
 setInterval(() => {
   updateCountdown();
   updateCountdownFinal();

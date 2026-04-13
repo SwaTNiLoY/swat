@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 
 app.use(express.json());
@@ -15,6 +16,37 @@ app.use(express.static(path.join(__dirname)));
 
 // Load encoded data
 const encodedData = require('./encoded_pages.json');
+
+// Counter file path
+const counterFile = path.join(__dirname, 'login_counter.json');
+
+// Load or initialize counter
+function loadCounter() {
+  try {
+    if (fs.existsSync(counterFile)) {
+      const data = fs.readFileSync(counterFile, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Error loading counter:', e);
+  }
+  return { count: 0 };
+}
+
+// Save counter
+function saveCounter(counterData) {
+  try {
+    fs.writeFileSync(counterFile, JSON.stringify(counterData, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Error saving counter:', e);
+  }
+}
+
+// Get current counter
+app.get('/api/login-counter', (req, res) => {
+  const counterData = loadCounter();
+  res.json({ count: counterData.count });
+});
 
 // Helper function to decode Base64
 function decodeBase64(str) {
@@ -57,7 +89,12 @@ app.post('/api/login', (req, res) => {
       }
     }
 
-    return res.json({ success: true, messages: decodedMessages });
+    // Increment login counter
+    const counterData = loadCounter();
+    counterData.count += 1;
+    saveCounter(counterData);
+
+    return res.json({ success: true, messages: decodedMessages, loginCount: counterData.count });
   } else {
     return res.status(401).json({ success: false, message: 'Kiii 😐\nTomake ami ai name a daki?' });
   }
