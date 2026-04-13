@@ -48,6 +48,14 @@ app.get('/api/login-counter', (req, res) => {
   res.json({ count: counterData.count });
 });
 
+// Increment counter
+app.post('/api/increment-counter', (req, res) => {
+  const counterData = loadCounter();
+  counterData.count += 1;
+  saveCounter(counterData);
+  res.json({ success: true, count: counterData.count });
+});
+
 // Helper function to decode Base64
 function decodeBase64(str) {
   try {
@@ -89,12 +97,7 @@ app.post('/api/login', (req, res) => {
       }
     }
 
-    // Increment login counter
-    const counterData = loadCounter();
-    counterData.count += 1;
-    saveCounter(counterData);
-
-    return res.json({ success: true, messages: decodedMessages, loginCount: counterData.count });
+    return res.json({ success: true, messages: decodedMessages });
   } else {
     return res.status(401).json({ success: false, message: 'Kiii 😐\nTomake ami ai name a daki?' });
   }

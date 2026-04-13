@@ -3,12 +3,26 @@
   "functions": {
     "api/login.js": {
       "runtime": "nodejs18.x"
+    },
+    "api/login-counter.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/increment-counter.js": {
+      "runtime": "nodejs18.x"
     }
   },
   "routes": [
     {
       "src": "/api/login",
       "dest": "/api/login.js"
+    },
+    {
+      "src": "/api/login-counter",
+      "dest": "/api/login-counter.js"
+    },
+    {
+      "src": "/api/increment-counter",
+      "dest": "/api/increment-counter.js"
     },
     {
       "src": "/(.*)",

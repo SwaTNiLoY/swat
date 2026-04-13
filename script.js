@@ -135,17 +135,23 @@ function completeLogin() {
 const BACKEND_ORIGIN = 'http://localhost:3000';
 const API_BASE_URL = (() => {
   const isLocalFile = window.location.protocol === 'file:';
-  const isGitHubPages = window.location.hostname.endsWith('github.io');
   const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
   const isLocalPort3000 = isLocalHost && window.location.port === '3000';
   const isNonBackendLocalPort = isLocalHost && window.location.port && window.location.port !== '3000';
 
-  if (isGitHubPages || (!isLocalFile && !isLocalPort3000 && !isNonBackendLocalPort && !isLocalHost)) {
-    return null;
+  // For localhost development
+  if (isNonBackendLocalPort || isLocalPort3000) {
+    return BACKEND_ORIGIN;
   }
 
-  if (isLocalFile || isNonBackendLocalPort || isLocalPort3000) {
-    return BACKEND_ORIGIN;
+  // For deployed versions (Vercel, GitHub Pages, etc.) use current origin
+  if (!isLocalFile && !isLocalHost) {
+    return window.location.origin;
+  }
+
+  // For local file protocol fallback
+  if (isLocalFile) {
+    return null;
   }
 
   return window.location.origin;
@@ -194,10 +200,23 @@ async function handleLogin() {
 
       if (response.ok && data && data.success) {
         messageData = data.messages;
-        if (data.loginCount) {
-          loginCount = data.loginCount;
-          updateLoginCounter();
+        
+        // Increment counter on successful login
+        if (API_BASE_URL) {
+          try {
+            await fetch(`${API_BASE_URL}/api/increment-counter`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+          } catch (err) {
+            console.error('Failed to increment counter:', err);
+          }
         }
+        
+        // Then fetch updated counter
+        fetchLoginCounter();
         injectMessages(messageData);
         completeLogin();
         return;
@@ -218,6 +237,22 @@ async function handleLogin() {
   if (fallback) {
     if (fallback.success) {
       messageData = fallback.messages;
+      
+      // Try to increment counter if API is available
+      if (API_BASE_URL) {
+        try {
+          await fetch(`${API_BASE_URL}/api/increment-counter`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          fetchLoginCounter();
+        } catch (err) {
+          console.error('Failed to increment counter:', err);
+        }
+      }
+      
       injectMessages(messageData);
       completeLogin();
       return;
