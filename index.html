@@ -27,8 +27,7 @@
           <h1>What I call you?</h1>
         </div>
         <div class="content-block login-content">
-          <input type="email" id="emailInput" placeholder="Enter email" autocomplete="email" />
-          <input type="password" id="passwordInput" placeholder="Enter password" autocomplete="current-password" />
+          <input type="password" id="passwordInput" placeholder="Enter password" autocomplete="off" />
           <button class="page-button" id="loginButton">Login</button>
         </div>
       </div>
@@ -334,6 +333,26 @@
         </div>
       </div>
 
-  <script type="module" src="script.js?v=5"></script>
+  <script src="script.js?v=5"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAy-DSzOHaXuxXTRfP5D_mFkrQF74MbuVE",
+      authDomain: "message-to-someone-special.firebaseapp.com",
+      projectId: "message-to-someone-special",
+      storageBucket: "message-to-someone-special.firebasestorage.app",
+      messagingSenderId: "533652600769",
+      appId: "1:533652600769:web:6350897e162100bfcee140",
+      databaseURL: "https://message-to-someone-special-default-rtdb.firebaseio.com"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+  </script>
 </body>
 </html>
