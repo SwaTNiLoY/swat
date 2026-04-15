@@ -42,16 +42,19 @@ module.exports = (req, res) => {
     return;
   }
 
-  const { password } = req.body || {};
-  if (!password) {
-    res.status(400).json({ success: false, message: 'Password required' });
+  const { password, userId } = req.body || {};
+  if (!password && !userId) {
+    res.status(400).json({ success: false, message: 'Authentication required' });
     return;
   }
 
-  const encodedPassword = Buffer.from(password.toLowerCase()).toString('base64');
-  if (encodedPassword !== encodedData.password) {
-    res.status(401).json({ success: false, message: 'Kiii 😐\nTomake ami ai name a daki?' });
-    return;
+  // If userId is provided (from Firebase auth), skip password check
+  if (!userId) {
+    const encodedPassword = Buffer.from(password.toLowerCase()).toString('base64');
+    if (encodedPassword !== encodedData.password) {
+      res.status(401).json({ success: false, message: 'Kiii 😐\nTomake ami ai name a daki?' });
+      return;
+    }
   }
 
   res.status(200).json({ success: true, messages: decodeMessages(encodedData.messages) });

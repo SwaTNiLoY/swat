@@ -1,23 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// Try to read from file if it exists
-function getCounterFromFile() {
-  try {
-    const counterFile = path.join(__dirname, '..', 'login_counter.json');
-    if (fs.existsSync(counterFile)) {
-      const data = fs.readFileSync(counterFile, 'utf8');
-      return JSON.parse(data).count || 0;
-    }
-  } catch (e) {
-    console.error('Error reading counter file:', e);
-  }
-  return 0;
-}
-
-// Store counter in memory for this deployment
-let currentCount = getCounterFromFile();
-
 module.exports = (req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -34,12 +17,18 @@ module.exports = (req, res) => {
     return;
   }
 
-  res.status(200).json({ count: currentCount });
+  // Try to read counter from file (won't work on Vercel, but good for testing)
+  let count = 0;
+  try {
+    const counterFile = path.join(__dirname, '..', 'login_counter.json');
+    if (fs.existsSync(counterFile)) {
+      const data = JSON.parse(fs.readFileSync(counterFile, 'utf8'));
+      count = data.count || 0;
+    }
+  } catch (e) {
+    console.log('Could not read counter file (normal on Vercel)');
+  }
+
+  res.status(200).json({ count: count });
 };
 
-// Export for direct function calls
-module.exports.getCurrentCount = () => currentCount;
-module.exports.incrementCount = () => {
-  currentCount += 1;
-  return currentCount;
-};

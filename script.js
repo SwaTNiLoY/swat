@@ -1,4 +1,40 @@
 // Frontend script - all data fetched from server, never embedded in page source
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getDatabase, ref, onValue, set } from 'firebase/database';
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAy-DSzOHaXuxXTRfP5D_mFkrQF74MbuVE",
+  authDomain: "message-to-someone-special.firebaseapp.com",
+  projectId: "message-to-someone-special",
+  storageBucket: "message-to-someone-special.firebasestorage.app",
+  messagingSenderId: "533652600769",
+  appId: "1:533652600769:web:6350897e162100bfcee140",
+  measurementId: "G-V1VQ5111C0",
+  databaseURL: "https://message-to-someone-special-default-rtdb.firebaseio.com"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const database = getDatabase(app);
+
+// Listen for auth state changes
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // User is signed in
+    isLoggedIn = true;
+    loginOverlay.classList.remove('active');
+    console.log('User signed in:', user.email);
+  } else {
+    // User is signed out
+    isLoggedIn = false;
+    loginOverlay.classList.add('active');
+    console.log('User signed out');
+  }
+});
+
 let currentPage = 0;
 const totalPages = 7;
 let messageData = {};
@@ -9,6 +45,7 @@ const book = document.getElementById('book');
 const nextButtons = document.querySelectorAll('.page-next');
 const prevButtons = document.querySelectorAll('.page-prev');
 const loginOverlay = document.getElementById('loginOverlay');
+const emailInput = document.getElementById('emailInput');
 const passwordInput = document.getElementById('passwordInput');
 const loginButton = document.getElementById('loginButton');
 const pageNoButton = document.getElementById('pageNoButton');
@@ -27,7 +64,29 @@ function updateLoginCounter() {
   }
 }
 
-// Fetch login counter from backend
+// Set up real-time listener for login counter from Firebase
+function setupLoginCounterListener() {
+  try {
+    const counterRef = ref(database, 'loginCounter');
+    onValue(counterRef, (snapshot) => {
+      if (snapshot.exists()) {
+        loginCount = snapshot.val();
+        console.log('Login count updated:', loginCount);
+        updateLoginCounter();
+      } else {
+        // Initialize counter if it doesn't exist
+        loginCount = 0;
+        updateLoginCounter();
+      }
+    }, (error) => {
+      console.error('Failed to listen to login counter:', error);
+    });
+  } catch (error) {
+    console.error('Error setting up counter listener:', error);
+  }
+}
+
+// Fetch login counter from backend (fallback)
 async function fetchLoginCounter() {
   const useBackend = Boolean(API_BASE_URL);
   if (!useBackend) return;
@@ -159,112 +218,67 @@ const API_BASE_URL = (() => {
 
 // Handle login
 async function handleLogin() {
+  const email = emailInput.value.trim();
   const password = passwordInput.value.trim();
   
-  if (!password) {
-    showToast('Kiii 😐<br>Tomake ami ai name a daki?');
+  if (!email || !password) {
+    showToast('Kiii 😐<br>Enter both email and password!');
     return;
   }
 
-  const useBackend = Boolean(API_BASE_URL);
-  console.log('API_BASE_URL:', API_BASE_URL);
-  if (useBackend) {
-    console.log('Making request to:', `${API_BASE_URL}/api/login`);
-  } else {
-    console.log('Skipping backend login; using local fallback on static host');
-  }
-
-  let response;
-  let data = null;
-
-  if (useBackend) {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    console.log('Logged in as:', user.email);
+    
+    // Increment counter in Firebase Realtime Database
     try {
-      response = await fetch(`${API_BASE_URL}/api/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password })
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
+      const counterRef = ref(database, 'loginCounter');
+      onValue(counterRef, (snapshot) => {
+        const currentCount = snapshot.val() || 0;
+        set(counterRef, currentCount + 1).then(() => {
+          console.log('Counter incremented to:', currentCount + 1);
+        }).catch(err => {
+          console.error('Failed to increment counter:', err);
+        });
+      }, { onlyOnce: true });
+    } catch (err) {
+      console.error('Failed to update counter:', err);
+    }
+    
+    // Fetch messages from backend (assuming backend still serves them)
+    const useBackend = Boolean(API_BASE_URL);
+    if (useBackend) {
       try {
-        data = await response.json();
-        console.log('Response data:', data);
-      } catch (err) {
-        console.error('Failed to parse JSON:', err);
-        data = null;
-      }
-
-      if (response.ok && data && data.success) {
-        messageData = data.messages;
+        const response = await fetch(`${API_BASE_URL}/api/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.uid }) // Pass user ID instead of password
+        });
         
-        // Increment counter on successful login
-        if (API_BASE_URL) {
-          try {
-            await fetch(`${API_BASE_URL}/api/increment-counter`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              }
-            });
-          } catch (err) {
-            console.error('Failed to increment counter:', err);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            messageData = data.messages;
+            injectMessages(messageData);
+            completeLogin();
+            return;
           }
         }
-        
-        // Then fetch updated counter
-        fetchLoginCounter();
-        injectMessages(messageData);
-        completeLogin();
-        return;
+      } catch (err) {
+        console.error('Failed to fetch messages from backend:', err);
       }
-
-      if (response.ok) {
-        showToast((data && data.message) ? data.message.replace(/\n/g, '<br>') : 'Kiii 😐<br>Tomake ami ai name a daki?');
-        return;
-      }
-
-      console.error('Login response error:', response.status, (data && data.message) ? data.message : 'Server login failed');
-    } catch (error) {
-      console.error('Backend request failed:', error);
     }
+    
+    // Fallback if no backend
+    completeLogin();
+    
+  } catch (error) {
+    console.error('Login failed:', error);
+    showToast('Login failed: ' + error.message);
   }
-
-  const fallback = await tryLocalLogin(password);
-  if (fallback) {
-    if (fallback.success) {
-      messageData = fallback.messages;
-      
-      // Try to increment counter if API is available
-      if (API_BASE_URL) {
-        try {
-          await fetch(`${API_BASE_URL}/api/increment-counter`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-          fetchLoginCounter();
-        } catch (err) {
-          console.error('Failed to increment counter:', err);
-        }
-      }
-      
-      injectMessages(messageData);
-      completeLogin();
-      return;
-    }
-    showToast(fallback.message.replace(/\n/g, '<br>'));
-    return;
-  }
-
-  const isLocalFile = window.location.protocol === 'file:' || window.location.origin === 'null';
-  showToast(isLocalFile
-    ? 'Server not reachable. Start the app with `npm start` and open http://localhost:3000, or host the page on a local web server.'
-    : 'Unable to complete login. The backend API is unavailable on this host.');
 }
 
 // Update countdown timer
@@ -337,10 +351,10 @@ if (pageNoButton) {
 }
 
 // Initialize
+setupLoginCounterListener();
 showLoginOverlay();
 updateCountdown();
 updateCountdownFinal();
-fetchLoginCounter();
 setInterval(() => {
   updateCountdown();
   updateCountdownFinal();
