@@ -225,20 +225,16 @@ async function handleLogin() {
         messageData = data.messages;
         
         // Increment counter in Firebase
-        try {
-          if (typeof database !== 'undefined') {
-            const counterRef = database.ref('loginCounter');
-            counterRef.on('value', (snapshot) => {
-              const currentCount = (snapshot.val() || 0);
-              counterRef.set(currentCount + 1).then(() => {
-                console.log('Counter incremented to:', currentCount + 1);
-              }).catch(err => {
-                console.error('Failed to increment counter:', err);
-              });
-            }, { onlyOnce: true });
-          }
-        } catch (err) {
-          console.error('Failed to update counter:', err);
+        if (typeof database !== 'undefined') {
+          const counterRef = database.ref('loginCounter');
+          counterRef.once('value').then((snapshot) => {
+            const currentCount = (snapshot.val() || 0);
+            return counterRef.set(currentCount + 1);
+          }).then(() => {
+            console.log('Counter incremented successfully');
+          }).catch(err => {
+            console.error('Failed to increment counter:', err);
+          });
         }
         
         injectMessages(messageData);
@@ -263,20 +259,16 @@ async function handleLogin() {
       messageData = fallback.messages;
       
       // Increment counter in Firebase
-      try {
-        if (typeof database !== 'undefined') {
-          const counterRef = database.ref('loginCounter');
-          counterRef.on('value', (snapshot) => {
-            const currentCount = (snapshot.val() || 0);
-            counterRef.set(currentCount + 1).then(() => {
-              console.log('Counter incremented to:', currentCount + 1);
-            }).catch(err => {
-              console.error('Failed to increment counter:', err);
-            });
-          }, { onlyOnce: true });
-        }
-      } catch (err) {
-        console.error('Failed to update counter:', err);
+      if (typeof database !== 'undefined') {
+        const counterRef = database.ref('loginCounter');
+        counterRef.once('value').then((snapshot) => {
+          const currentCount = (snapshot.val() || 0);
+          return counterRef.set(currentCount + 1);
+        }).then(() => {
+          console.log('Counter incremented successfully');
+        }).catch(err => {
+          console.error('Failed to increment counter:', err);
+        });
       }
       
       injectMessages(messageData);
