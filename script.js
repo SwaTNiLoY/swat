@@ -3,7 +3,6 @@ let currentPage = 0;
 const totalPages = 7;
 let messageData = {};
 let isLoggedIn = false;
-let loginCount = 0;
 
 const book = document.getElementById('book');
 const nextButtons = document.querySelectorAll('.page-next');
@@ -20,53 +19,6 @@ function updateBook() {
 }
 
 // Display login counter on the last page
-function updateLoginCounter() {
-  const counterElement = document.getElementById('loginCounter');
-  if (counterElement) {
-    counterElement.textContent = loginCount;
-  }
-}
-
-// Set up real-time listener for login counter from Firebase
-function setupLoginCounterListener() {
-  try {
-    if (typeof database === 'undefined') {
-      console.warn('Firebase not initialized yet');
-      return;
-    }
-    const counterRef = database.ref('loginCounter');
-    counterRef.on('value', (snapshot) => {
-      if (snapshot.exists()) {
-        loginCount = snapshot.val();
-        console.log('Login count updated:', loginCount);
-        updateLoginCounter();
-      } else {
-        loginCount = 0;
-        updateLoginCounter();
-      }
-    });
-  } catch (error) {
-    console.error('Error setting up counter listener:', error);
-  }
-}
-
-// Fetch login counter from backend (fallback)
-async function fetchLoginCounter() {
-  const useBackend = Boolean(API_BASE_URL);
-  if (!useBackend) return;
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/login-counter`);
-    if (response.ok) {
-      const data = await response.json();
-      loginCount = data.count;
-      updateLoginCounter();
-    }
-  } catch (error) {
-    console.error('Failed to fetch login counter:', error);
-  }
-}
-
 // Inject fetched messages into the page
 function injectMessages(messages) {
   const msgWelcome = document.getElementById('msg-welcome');
@@ -155,31 +107,6 @@ function completeLogin() {
   }, 500);
 }
 
-const BACKEND_ORIGIN = 'http://localhost:3000';
-const API_BASE_URL = (() => {
-  const isLocalFile = window.location.protocol === 'file:';
-  const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-  const isLocalPort3000 = isLocalHost && window.location.port === '3000';
-  const isNonBackendLocalPort = isLocalHost && window.location.port && window.location.port !== '3000';
-
-  // For localhost development
-  if (isNonBackendLocalPort || isLocalPort3000) {
-    return BACKEND_ORIGIN;
-  }
-
-  // For deployed versions (Vercel, GitHub Pages, etc.) use current origin
-  if (!isLocalFile && !isLocalHost) {
-    return window.location.origin;
-  }
-
-  // For local file protocol fallback
-  if (isLocalFile) {
-    return null;
-  }
-
-  return window.location.origin;
-})();
-
 // Handle login
 async function handleLogin() {
   const password = passwordInput.value.trim();
@@ -189,88 +116,10 @@ async function handleLogin() {
     return;
   }
 
-  const useBackend = Boolean(API_BASE_URL);
-  console.log('API_BASE_URL:', API_BASE_URL);
-  if (useBackend) {
-    console.log('Making request to:', `${API_BASE_URL}/api/login`);
-  } else {
-    console.log('Skipping backend login; using local fallback on static host');
-  }
-
-  let response;
-  let data = null;
-
-  if (useBackend) {
-    try {
-      response = await fetch(`${API_BASE_URL}/api/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password })
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      try {
-        data = await response.json();
-        console.log('Response data:', data);
-      } catch (err) {
-        console.error('Failed to parse JSON:', err);
-        data = null;
-      }
-
-      if (response.ok && data && data.success) {
-        messageData = data.messages;
-        
-        // Increment counter in Firebase
-        if (typeof database !== 'undefined') {
-          const counterRef = database.ref('loginCounter');
-          counterRef.once('value').then((snapshot) => {
-            const currentCount = (snapshot.val() || 0);
-            return counterRef.set(currentCount + 1);
-          }).then(() => {
-            console.log('Counter incremented successfully');
-          }).catch(err => {
-            console.error('Failed to increment counter:', err);
-          });
-        }
-        
-        injectMessages(messageData);
-        completeLogin();
-        return;
-      }
-
-      if (response.ok) {
-        showToast((data && data.message) ? data.message.replace(/\n/g, '<br>') : 'Kiii 😐<br>Tomake ami ai name a daki?');
-        return;
-      }
-
-      console.error('Login response error:', response.status, (data && data.message) ? data.message : 'Server login failed');
-    } catch (error) {
-      console.error('Backend request failed:', error);
-    }
-  }
-
   const fallback = await tryLocalLogin(password);
   if (fallback) {
     if (fallback.success) {
       messageData = fallback.messages;
-      
-      // Increment counter in Firebase
-      if (typeof database !== 'undefined') {
-        const counterRef = database.ref('loginCounter');
-        counterRef.once('value').then((snapshot) => {
-          const currentCount = (snapshot.val() || 0);
-          return counterRef.set(currentCount + 1);
-        }).then(() => {
-          console.log('Counter incremented successfully');
-        }).catch(err => {
-          console.error('Failed to increment counter:', err);
-        });
-      }
-      
       injectMessages(messageData);
       completeLogin();
       return;
@@ -279,10 +128,7 @@ async function handleLogin() {
     return;
   }
 
-  const isLocalFile = window.location.protocol === 'file:' || window.location.origin === 'null';
-  showToast(isLocalFile
-    ? 'Server not reachable. Start the app with `npm start` and open http://localhost:3000, or host the page on a local web server.'
-    : 'Unable to complete login. The backend API is unavailable on this host.');
+  showToast('Unable to complete login. Please open the app from a live web server or check that encoded_pages.json is available.');
 }
 
 // Update countdown timer
@@ -355,7 +201,6 @@ if (pageNoButton) {
 }
 
 // Initialize
-setupLoginCounterListener();
 showLoginOverlay();
 updateCountdown();
 updateCountdownFinal();
